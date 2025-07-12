@@ -18,7 +18,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.header("📅 Início da Clínica")
-    meses_sem_funcionar = st.number_input("Meses de aluguel antes de operar", min_value=0, max_value=60, value=0)
+    meses_sem_funcionar = st.number_input("Meses de aluguel antes de operar", min_value=0, max_value=60, value=2)
     clientes_iniciais = st.number_input("Clientes iniciais (mês 1 após início)", min_value=0, value=0)
 
     st.markdown("---")
@@ -47,8 +47,8 @@ with st.sidebar:
 
     st.markdown("---")
     st.header("📌 Expansão da Clínica")
-    clientes_por_psicologo = st.number_input("Clientes trazidos por novo psicólogo", min_value=0, value=20)
-    capacidade_psicologo = st.number_input("Capacidade de atendimento por psicólogo (clientes/mês)", min_value=1, value=40)
+    clientes_por_psicologo = st.number_input("Clientes trazidos por novo psicólogo", min_value=0, value=0)
+    capacidade_psicologo = st.number_input("Capacidade de atendimento por psicólogo (clientes/mês)", min_value=1, value=30)
                                            
 # ==== FUNÇÕES AUXILIARES ====
 def calcular_custo_fixo(mes):
