@@ -9,10 +9,17 @@ st.title("📊 Simulador Financeiro de Clínica")
 # ==== SIDEBAR ====
 with st.sidebar:
     st.header("🔢 Parâmetros Financeiros")
-    custo_fixo_inicial = st.number_input("Custo fixo inicial (R$)", min_value=0.0, value=16200.0)
+    valor_padrao_custo = st.session_state.get("custo_fixo_inicial", 16200.0)
+    custo_fixo_inicial = st.number_input("Custo fixo inicial (R$)", min_value=0.0, value=valor_padrao_custo, key="simulador_custo_fixo")
+
     valor_sessao = st.number_input("Valor de cada sessão (R$)", min_value=1.0, value=300.0)
     porcent_clinica = st.number_input("% da sessão para a clínica", min_value=0.0, max_value=100.0, value=60.0) / 100
     porcent_imposto = st.number_input("% de imposto sobre a clínica", min_value=0.0, max_value=100.0, value=20.0) / 100
+
+    st.markdown("---")
+    st.header("📅 Início da Clínica")
+    meses_sem_funcionar = st.number_input("Meses de aluguel antes de operar", min_value=0, max_value=60, value=0)
+    clientes_iniciais = st.number_input("Clientes iniciais (mês 1 após início)", min_value=0, value=0)
 
     st.markdown("---")
     st.header("👩‍⚕️ Psicólogas")
@@ -40,9 +47,9 @@ with st.sidebar:
 
     st.markdown("---")
     st.header("📌 Expansão da Clínica")
-    clientes_por_psicologo = st.number_input("Clientes trazidos por novo psicólogo", min_value=1, value=20)
+    clientes_por_psicologo = st.number_input("Clientes trazidos por novo psicólogo", min_value=0, value=20)
     capacidade_psicologo = st.number_input("Capacidade de atendimento por psicólogo (clientes/mês)", min_value=1, value=40)
-
+                                           
 # ==== FUNÇÕES AUXILIARES ====
 def calcular_custo_fixo(mes):
     if mes <= 6:
@@ -103,20 +110,47 @@ investimento_inicial_saude = 50000.0
 max_meses = 60
 
 for mes in range(1, max_meses + 1):
-    custo_fixo = calcular_custo_fixo(mes)
-    flag = False
-    if mes > 1:
+    # Meses em que a clínica ainda não está operando
+    if mes <= meses_sem_funcionar:
+        custo_fixo = 10000.0
+        faturamento = 0.0
+        lucro = -custo_fixo
+        pagamento_investidor_mes = 0
+        pagamento_investidor_acumulado += pagamento_investidor_mes
+        lucro_acumulado += lucro
+        montante_saude = investimento_inicial_saude + lucro_acumulado
+
+        data.append({
+            "Mês": mes,
+            "Clientes": 0,
+            "Psicólogos": 0,
+            "Salas Usadas": 0,
+            "Sessões": 0,
+            "Custo Fixo (R$)": custo_fixo,
+            "Faturamento (R$)": faturamento,
+            "Lucro (R$)": lucro,
+            "Montante de Saúde (R$)": montante_saude,
+            "Pagamento ao Investidor (R$)": pagamento_investidor_acumulado
+        })
+        continue  # pula para o próximo mês
+
+    # Clínica em operação
+    if mes == meses_sem_funcionar + 1:
+        clientes = clientes_iniciais
+    else:
         clientes += clientes_crescimento
-        flag = True
+
+    custo_fixo = calcular_custo_fixo(mes)
 
     capacidade_total = len(psicologos_dinamicos) * capacidade_psicologo * 4
     if clientes * 4 > capacidade_total:
         novos_psicologos = ((clientes * 4 - capacidade_total) // (capacidade_psicologo * 4)) + 1
         for _ in range(novos_psicologos):
             psicologos_dinamicos.append("Novo")
-            if not flag:
+            if mes == meses_sem_funcionar + 1:
                 clientes += clientes_por_psicologo
-    total_psicologos = 1 + len(psicologos_dinamicos)  # fixas + dinâmicos
+
+    total_psicologos = 1 + len(psicologos_dinamicos)  # Luiza + dinâmicos
 
     horas_ocupadas_luiza = luiza_sessoes * tempo_sessao
     horas_ocupadas_noelia = noelia_sessoes * tempo_sessao
