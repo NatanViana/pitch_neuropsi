@@ -29,6 +29,7 @@ def get_mysql_conn():
         ssl={"ssl": True}  # adapte conforme seu contexto SSL
     )
 
+
 def criar_tabela_plano_estrategico():
     with get_mysql_conn() as conn:
         with conn.cursor() as cursor:
@@ -44,6 +45,20 @@ def criar_tabela_plano_estrategico():
             """)
         conn.commit()
 
+
+def criar_tabela_despesas():
+    with get_mysql_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS despesas (
+                    id BIGINT PRIMARY KEY,
+                    nome VARCHAR(255),
+                    valor DECIMAL(10, 2)
+                )
+            """)
+        conn.commit()
+
+
 def listar_tarefas():
     with get_mysql_conn() as conn:
         with conn.cursor() as cursor:
@@ -55,10 +70,10 @@ def listar_tarefas():
                 return pd.DataFrame(columns=colunas)
             return pd.DataFrame(rows, columns=colunas)
 
+
 def adicionar_tarefa(categoria, tarefa, status, data_limite, responsaveis):
-    # Corrige possíveis hífens invisíveis no campo de data
     if isinstance(data_limite, str):
-        data_limite = data_limite.replace("‑", "-").replace("–", "-")  # NB-hyphen e en-dash
+        data_limite = data_limite.replace("‑", "-").replace("–", "-")
         data_limite = datetime.strptime(data_limite, "%Y-%m-%d").date()
 
     with get_mysql_conn() as conn:
@@ -72,6 +87,50 @@ def adicionar_tarefa(categoria, tarefa, status, data_limite, responsaveis):
             """, (next_id, categoria, tarefa, status, data_limite, responsaveis))
         conn.commit()
 
+
+def adicionar_despesa(nome, valor):
+    with get_mysql_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT MAX(id) as max_id FROM despesas")
+            next_id = (cursor.fetchone()['max_id'] or 0) + 1
+
+            cursor.execute("""
+                INSERT INTO despesas (id, nome, valor)
+                VALUES (%s, %s, %s)
+            """, (next_id, nome, valor))
+        conn.commit()
+
+
+def atualizar_despesa(id, nome=None, valor=None):
+    updates = []
+    params = []
+
+    if nome is not None:
+        updates.append("nome = %s")
+        params.append(nome)
+    if valor is not None:
+        updates.append("valor = %s")
+        params.append(valor)
+
+    if not updates:
+        return
+
+    query = f"UPDATE despesas SET {', '.join(updates)} WHERE id = %s"
+    params.append(id)
+
+    with get_mysql_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, params)
+        conn.commit()
+
+
+def excluir_despesa(despesa_id):
+    with get_mysql_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM despesas WHERE id = %s", (despesa_id,))
+        conn.commit()
+
+
 def atualizar_titulo_categoria(id, nova_tarefa, nova_categoria):
     with get_mysql_conn() as conn:
         with conn.cursor() as cursor:
@@ -81,6 +140,7 @@ def atualizar_titulo_categoria(id, nova_tarefa, nova_categoria):
                 WHERE id = %s
             """, (nova_tarefa, nova_categoria, id))
         conn.commit()
+
 
 def atualizar_tarefa(id, status=None, data_limite=None, responsaveis=None):
     updates = []
@@ -107,11 +167,13 @@ def atualizar_tarefa(id, status=None, data_limite=None, responsaveis=None):
             cursor.execute(query, params)
         conn.commit()
 
+
 def excluir_tarefa(tarefa_id):
     with get_mysql_conn() as conn:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM plano_estrategico WHERE id = %s", (tarefa_id,))
         conn.commit()
+
 
 def tarefa_existe(df_db, tarefa, categoria):
     return not df_db[(df_db["tarefa"] == tarefa) & (df_db["categoria"] == categoria)].empty

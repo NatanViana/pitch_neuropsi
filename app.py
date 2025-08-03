@@ -52,13 +52,17 @@ with st.sidebar:
                                            
 # ==== FUNÇÕES AUXILIARES ====
 def calcular_custo_fixo(mes):
-    if mes <= 6:
+    if mes <= 4:
         return custo_fixo_inicial
     elif mes <= 12:
-        return custo_fixo_inicial + 2000
+        return custo_fixo_inicial + 2700
+    elif mes <= 32:
+        return custo_fixo_inicial + 2700 + 5000
+    elif mes <= 33:
+        return custo_fixo_inicial + 2700 - 2803
     else:
-        return custo_fixo_inicial + 7000
-
+        return custo_fixo_inicial - 2803
+    
 def highlight_negatives(val):
     return 'color: red;' if val < 0 else ''
 
@@ -84,7 +88,7 @@ sessoes_minimas = calcular_custo_fixo(1) / receita_liquida_por_sessao
 percent_ocupado = (sessoes_minimas / sessoes_disponiveis) * 100 if sessoes_disponiveis > 0 else 0
 clientes_mes = sessoes_minimas / 4
 faturamento_maximo = sessoes_disponiveis * receita_liquida_por_sessao
-lucro_maximo = faturamento_maximo - calcular_custo_fixo(13)
+lucro_maximo = faturamento_maximo - calcular_custo_fixo(47)
 
 # ==== MÉTRICAS ====
 st.header("📌 Indicadores Principais")
@@ -109,14 +113,23 @@ pagamento_investidor_acumulado = 0
 investimento_inicial_saude = 50000.0
 max_meses = 60
 
-for mes in range(1, max_meses + 1):
+# Inicialização dos pagamentos
+pagamento_pronampe_acumulado = 0
+pagamento_emprestimo_bb_acumulado = 0
+
+# Simulação
+for mes in range(1, 60):
     # Meses em que a clínica ainda não está operando
     if mes <= meses_sem_funcionar:
         custo_fixo = 10000.0
         faturamento = 0.0
         lucro = -custo_fixo
         pagamento_investidor_mes = 0
+        pagamento_pronampe_mes = 0
+        pagamento_emprestimo_bb_mes = 0
         pagamento_investidor_acumulado += pagamento_investidor_mes
+        pagamento_pronampe_acumulado += pagamento_pronampe_mes
+        pagamento_emprestimo_bb_acumulado += pagamento_emprestimo_bb_mes
         lucro_acumulado += lucro
         montante_saude = investimento_inicial_saude + lucro_acumulado
 
@@ -130,7 +143,9 @@ for mes in range(1, max_meses + 1):
             "Faturamento (R$)": faturamento,
             "Lucro (R$)": lucro,
             "Montante de Saúde (R$)": montante_saude,
-            "Pagamento ao Investidor (R$)": pagamento_investidor_acumulado
+            "Pagamento ao Investidor (R$)": pagamento_investidor_acumulado,
+            "Pagamento PRONAMPE (R$)": pagamento_pronampe_acumulado,
+            "Pagamento Empréstimo BB (R$)": pagamento_emprestimo_bb_acumulado
         })
         continue  # pula para o próximo mês
 
@@ -167,8 +182,14 @@ for mes in range(1, max_meses + 1):
 
     faturamento = sessoes_mes * receita_liquida_por_sessao
     lucro = faturamento - custo_fixo
-    pagamento_investidor_mes = 5000 if mes >= 13 else 0
+    pagamento_investidor_mes = 5000 if mes >= 13 and pagamento_investidor_acumulado < 100000 else 0
+    pagamento_pronampe_mes = 2700 if mes >= 5 and pagamento_pronampe_acumulado < 113400 else 0
+    pagamento_emprestimo_bb_mes = 2803 if pagamento_emprestimo_bb_acumulado < 100908 else 0
+
     pagamento_investidor_acumulado += pagamento_investidor_mes
+    pagamento_pronampe_acumulado += pagamento_pronampe_mes
+    pagamento_emprestimo_bb_acumulado += pagamento_emprestimo_bb_mes
+
     lucro_acumulado += lucro
     montante_saude = investimento_inicial_saude + lucro_acumulado
 
@@ -184,10 +205,12 @@ for mes in range(1, max_meses + 1):
         "Faturamento (R$)": round(faturamento, 2),
         "Lucro (R$)": round(lucro, 2),
         "Montante de Saúde (R$)": round(montante_saude, 2),
-        "Pagamento ao Investidor (R$)": pagamento_investidor_acumulado
+        "Pagamento ao Investidor (R$)": pagamento_investidor_acumulado,
+        "Pagamento PRONAMPE (R$)": pagamento_pronampe_acumulado,
+        "Pagamento Empréstimo BB (R$)": pagamento_emprestimo_bb_acumulado
     })
 
-    if sessoes_mes >= sessoes_disponiveis:
+    if sessoes_mes >= sessoes_disponiveis and mes == 50:
         break
 
 df = pd.DataFrame(data)
@@ -199,7 +222,9 @@ st.dataframe(
         "Faturamento (R$)": "R$ {:,.2f}",
         "Lucro (R$)": "R$ {:,.2f}",
         "Montante de Saúde (R$)": "R$ {:,.2f}",
-        "Pagamento ao Investidor (R$)": "R$ {:,.2f}"
+        "Pagamento ao Investidor (R$)": "R$ {:,.2f}",
+        "Pagamento PRONAMPE (R$)": "R$ {:,.2f}",
+        "Pagamento Empréstimo BB (R$)": "R$ {:,.2f}"
     }).applymap(highlight_negatives, subset=["Lucro (R$)", "Montante de Saúde (R$)"]),
     use_container_width=True
 )
