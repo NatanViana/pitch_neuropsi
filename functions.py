@@ -198,42 +198,6 @@ def adicionar_tarefa(categoria, tarefa, status, data_limite, responsaveis):
         conn.commit()
 
 
-def adicionar_despesa(nome, valor):
-    with get_mysql_conn() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT MAX(id) as max_id FROM despesas")
-            next_id = (cursor.fetchone()['max_id'] or 0) + 1
-
-            cursor.execute("""
-                INSERT INTO despesas (id, nome, valor)
-                VALUES (%s, %s, %s)
-            """, (next_id, nome, valor))
-        conn.commit()
-
-
-def atualizar_despesa(id, nome=None, valor=None):
-    updates = []
-    params = []
-
-    if nome is not None:
-        updates.append("nome = %s")
-        params.append(nome)
-    if valor is not None:
-        updates.append("valor = %s")
-        params.append(valor)
-
-    if not updates:
-        return
-
-    query = f"UPDATE despesas SET {', '.join(updates)} WHERE id = %s"
-    params.append(id)
-
-    with get_mysql_conn() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query, params)
-        conn.commit()
-
-
 def excluir_despesa(despesa_id):
     with get_mysql_conn() as conn:
         with conn.cursor() as cursor:
@@ -287,3 +251,93 @@ def excluir_tarefa(tarefa_id):
 
 def tarefa_existe(df_db, tarefa, categoria):
     return not df_db[(df_db["tarefa"] == tarefa) & (df_db["categoria"] == categoria)].empty
+
+def migrar_tabela_despesas_add_campos_periodo():
+    """
+    Adiciona campos de período na tabela despesas:
+    - mes_inicio (INT, default 1)
+    - duracao_meses (INT, NULL)  -> NULL = duração infinita
+
+    Seguro para rodar várias vezes (idempotente).
+    """
+    with get_mysql_conn() as conn:
+        with conn.cursor() as cursor:
+            # garante que a tabela existe
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS despesas (
+                    id BIGINT PRIMARY KEY,
+                    nome VARCHAR(255),
+                    valor DECIMAL(10, 2)
+                )
+            """)
+
+            def coluna_existe(nome_coluna: str) -> bool:
+                cursor.execute("SHOW COLUMNS FROM despesas LIKE %s", (nome_coluna,))
+                return cursor.fetchone() is not None
+
+            # adiciona mes_inicio
+            if not coluna_existe("mes_inicio"):
+                cursor.execute("""
+                    ALTER TABLE despesas
+                    ADD COLUMN mes_inicio INT NOT NULL DEFAULT 1
+                """)
+
+            # adiciona duracao_meses
+            if not coluna_existe("duracao_meses"):
+                cursor.execute("""
+                    ALTER TABLE despesas
+                    ADD COLUMN duracao_meses INT NULL
+                """)
+
+        conn.commit()
+
+def adicionar_despesa(nome, valor, mes_inicio=1, duracao_meses=None):
+    with get_mysql_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT MAX(id) as max_id FROM despesas")
+            next_id = (cursor.fetchone()['max_id'] or 0) + 1
+
+            # tenta inserir com colunas novas; se não existirem, cai no insert antigo
+            try:
+                cursor.execute("""
+                    INSERT INTO despesas (id, nome, valor, mes_inicio, duracao_meses)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (next_id, nome, valor, int(mes_inicio), duracao_meses))
+            except Exception:
+                cursor.execute("""
+                    INSERT INTO despesas (id, nome, valor)
+                    VALUES (%s, %s, %s)
+                """, (next_id, nome, valor))
+        conn.commit()
+
+
+def atualizar_despesa(id, nome=None, valor=None, mes_inicio=None, duracao_meses=None):
+    updates = []
+    params = []
+
+    if nome is not None:
+        updates.append("nome = %s")
+        params.append(nome)
+    if valor is not None:
+        updates.append("valor = %s")
+        params.append(valor)
+
+    # colunas novas (se existirem)
+    if mes_inicio is not None:
+        updates.append("mes_inicio = %s")
+        params.append(int(mes_inicio))
+    if duracao_meses is not None or duracao_meses is None:
+        # se você passar duracao_meses, atualiza (inclusive pra NULL)
+        updates.append("duracao_meses = %s")
+        params.append(duracao_meses)
+
+    if not updates:
+        return
+
+    query = f"UPDATE despesas SET {', '.join(updates)} WHERE id = %s"
+    params.append(id)
+
+    with get_mysql_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, params)
+        conn.commit()
