@@ -1,13 +1,6 @@
 import streamlit as st
 import pandas as pd
-from functions import (
-    criar_tabela_despesas,
-    adicionar_despesa,
-    atualizar_despesa,
-    excluir_despesa,
-    get_mysql_conn,
-    migrar_tabela_despesas_add_campos_periodo,  # <-- nova função
-)
+from functions import criar_tabela_despesas,adicionar_despesa,atualizar_despesa,excluir_despesa,get_mysql_conn,migrar_tabela_despesas_add_campos_periodo
 
 st.set_page_config(page_title="Despesas Globais", layout="wide")
 st.title("💰 Cadastro de Despesas Globais da Clínica")
