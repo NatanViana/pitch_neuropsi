@@ -14,7 +14,13 @@ with st.sidebar:
 
     valor_sessao = st.number_input("Valor de cada sessão (R$)", min_value=1.0, value=300.0)
     porcent_clinica = st.number_input("% da sessão para a clínica", min_value=0.0, max_value=100.0, value=60.0) / 100
-    porcent_imposto = st.number_input("% de imposto sobre a clínica", min_value=0.0, max_value=100.0, value=20.0) / 100
+    base_imposto = st.selectbox(
+    "Imposto incide sobre:",
+    ["Apenas % da clínica", "Total do faturamento"]
+    )
+    porcent_imposto = st.number_input(
+        "% de imposto", min_value=0.0, max_value=100.0, value=20.0
+    ) / 100
 
     st.markdown("---")
     st.header("📅 Início da Clínica")
@@ -67,7 +73,15 @@ def highlight_negatives(val):
     return 'color: red;' if val < 0 else ''
 
 # ==== CÁLCULOS INICIAIS ====
-receita_liquida_por_sessao = valor_sessao * porcent_clinica * (1 - porcent_imposto)
+receita_clinica_bruta_por_sessao = valor_sessao * porcent_clinica
+
+if base_imposto == "Apenas % da clínica":
+    imposto_por_sessao = receita_clinica_bruta_por_sessao * porcent_imposto
+else:  # "Total do faturamento (100% da sessão)"
+    imposto_por_sessao = valor_sessao * porcent_imposto
+
+receita_liquida_por_sessao = receita_clinica_bruta_por_sessao - imposto_por_sessao
+
 tempo_sessao = 1  # duração da sessão em horas
 
 total_horas = horas_dia * dias_uteis * semanas * num_salas
