@@ -80,12 +80,12 @@ with st.sidebar:
     porcent_clinica = (
         st.number_input("% da sessão para a clínica", min_value=0.0, max_value=100.0, value=60.0) / 100
     )
-    base_imposto = st.selectbox("Imposto incide sobre:", ["Apenas % da clínica", "Total do faturamento"])
-    porcent_imposto = st.number_input("% de imposto", min_value=0.0, max_value=100.0, value=20.0) / 100
+    base_imposto = st.selectbox("Imposto incide sobre:", ["Total do faturamento", "Apenas % da clínica"])
+    porcent_imposto = st.number_input("% de imposto", min_value=0.0, max_value=100.0, value=15.0) / 100
 
     st.markdown("---")
     st.header("Montante Saúde Inicial")
-    investimento_inicial_saude = st.number_input("Montante Inicial de Saúde Financeira", min_value=0, value=50000)
+    investimento_inicial_saude = st.number_input("Montante Inicial de Saúde Financeira", min_value=0, value=0)
 
     st.markdown("---")
     st.header("💸 Investidor")
@@ -94,8 +94,8 @@ with st.sidebar:
 
     st.markdown("---")
     st.header("📅 Início da Clínica")
-    meses_sem_funcionar = st.number_input("Meses de aluguel antes de operar", min_value=0, max_value=60, value=2)
-    clientes_iniciais = st.number_input("Clientes iniciais (mês 1 após início)", min_value=0, value=0)
+    meses_sem_funcionar = st.number_input("Meses de aluguel antes de operar", min_value=0, max_value=60, value=0)
+    clientes_iniciais = st.number_input("Clientes iniciais (mês 1 após início)", min_value=0, value=15)
 
     st.markdown("---")
     st.header("👩‍⚕️ Psicólogas")
